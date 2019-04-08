@@ -1,0 +1,4 @@
+rm ~/z-nextgen-app/src/specs/fixtures/checkin.js
+touch ~/z-nextgen-app/src/specs/fixtures/checkin.js
+echo "export default" > ~/z-nextgen-app/src/specs/fixtures/checkin.js
+cat db.json >> ~/z-nextgen-app/src/specs/fixtures/checkin.js
