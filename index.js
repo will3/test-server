@@ -11,16 +11,16 @@ const multer = require('multer');
 const bodyParser= require('body-parser');
 
 // SET STORAGE
-var storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads')
+const storage = multer.diskStorage({
+  destination(req, file, callback) {
+    callback(null, `./upload`);
   },
-  filename: function (req, file, cb) {
-    cb(null, file.fieldname + '-' + Date.now())
-  }
-})
+  filename(req, file, callback) {
+    callback(null, `${file.originalname}`)
+  },
+});
  
-var upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 db.defaults({ sessions: [], logs: [], events: [], networkLogs: [] }).write();
 
@@ -46,6 +46,18 @@ server.put('/sessions', (req, res) => {
 	}
 
 	res.send(session);
+});
+
+server.get('/sessions/:id', (req, res) => {
+	console.log(chalk.green("GET /sessions/:id"));
+
+	const existingSession = db.get('sessions').find({ id: req.params.id }).value();
+
+	if (existingSession == null) {
+		res.status(404).send();
+	} else {
+		res.send(existingSession);
+	}
 });
 
 function createSession(session) {
@@ -106,7 +118,7 @@ server.post('/network_logs', (req, res) => {
 	res.status(200).send();
 });
 
-server.post('/images', (req, res) => {
+server.post('/upload', upload.single('photo'), (req, res) => {
 	res.status(200).send();
 });
 
