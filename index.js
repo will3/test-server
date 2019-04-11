@@ -7,20 +7,7 @@ const adapter = new FileSync('db.json');
 const db = low(adapter);
 const moment = require('moment');
 const guid = require('uuid/v1');
-const multer = require('multer');
 const bodyParser= require('body-parser');
-
-// SET STORAGE
-const storage = multer.diskStorage({
-  destination(req, file, callback) {
-    callback(null, `./upload`);
-  },
-  filename(req, file, callback) {
-    callback(null, `${file.originalname}`)
-  },
-});
- 
-const upload = multer({ storage });
 
 db.defaults({ sessions: [], logs: [], events: [], networkLogs: [] }).write();
 
@@ -115,10 +102,6 @@ server.post('/network_logs', (req, res) => {
 	
 	db.get('networkLogs').push(networkLog).write();
 
-	res.status(200).send();
-});
-
-server.post('/upload', upload.single('photo'), (req, res) => {
 	res.status(200).send();
 });
 
