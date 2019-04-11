@@ -9,7 +9,7 @@ const moment = require('moment');
 const guid = require('uuid/v1');
 const bodyParser= require('body-parser');
 
-db.defaults({ sessions: [], logs: [], events: [], networkLogs: [] }).write();
+db.defaults({ sessions: [], events: [], networkLogs: [] }).write();
 
 server.use(express.json());
 server.use(bodyParser.urlencoded({extended: true}));
@@ -38,18 +38,54 @@ server.put('/sessions', (req, res) => {
 server.get('/sessions/:id', (req, res) => {
 	console.log(chalk.green("GET /sessions/:id"));
 
-	const existingSession = db.get('sessions').find({ id: req.params.id }).value();
+	const session = db.get('sessions').find({ id: req.params.id }).value();
 
-	if (existingSession == null) {
+	if (session == null) {
 		res.status(404).send();
-	} else {
-		res.send(existingSession);
-	}
+		return;
+	} 
+	
+	const sessionId = session.id;
+	
+	getSessionDetail(session);
+
+	res.send(session);
 });
 
-function createSession(session) {
-	removeAll();
+function getSessionDetail(session) {
+	const sessionId = session.id;
+	session.events = db.get('events').filter({ sessionId }).value();
+	session.networkLogs = db.get('networkLogs').filter({ sessionId }).value();
 
+	session.transcribe = getTranscribe(session);
+};
+
+function getTranscribe(session) {
+	const lines = [];
+
+	let changeTextEvent = null;
+
+	for (let i = 0; i < session.events.length; i ++) {
+		const event = session.events[i];
+
+		if (event.type === 'press') {
+			lines.push(`await spec.press("${event.identifier}");`);
+		}
+
+		if (event.type === 'changeText') {
+			changeTextEvent = event;
+		}
+
+		if (changeTextEvent != null && event.type !== 'changeText') {
+			lines.push(`await spec.fillIn("${event.identifier}", "${changeTextEvent.text}");`);
+			changeTextEvent = null;
+		}
+	}
+
+	return lines;
+};
+
+function createSession(session) {
 	session.id = session.id || guid();
 	session.created = moment().format('YYYY-MM-DDTHH:mm:ss');
 
@@ -65,19 +101,6 @@ function removeAll() {
 	db.get('logs').remove(() => true).write();
 	db.get('networkLogs').remove(() => true).write();
 };
-
-server.post('/logs', (req, res) => {
-	console.log(chalk.green("POST /logs") + "\n" + JSON.stringify(req.body));
-	const sessionId = req.params.sessionId;
-
-	const log = req.body;
-	log.id = guid();
-	log.created = moment().format('YYYY-MM-DDTHH:mm:ss');
-
-	db.get('logs').push(log).write();
-
-	res.status(200).send();
-});
 
 server.post('/events', (req, res) => {
 	console.log(chalk.green("POST /events") + "\n" + JSON.stringify(req.body));
